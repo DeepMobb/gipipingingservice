@@ -48,10 +48,11 @@
         .animate-fade-in {
             animation: fadeInScreen 0.5s ease-in-out forwards;
         }
-        #qr-scanner video {
+        #qr-scanner video, #face-scan-video {
             width: 100% !important;
             height: auto !important;
             border-radius: 1.5rem; /* rounded-3xl */
+            transform: scaleX(-1); /* Mirror front camera */
         }
         .chat-bubble {
             max-width: 75%;
@@ -65,6 +66,13 @@
             background-color: #333;
             color: white;
             align-self: flex-start;
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 1; }
+        }
+        .animate-pulse-subtle {
+          animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
     </style>
 </head>
@@ -103,7 +111,7 @@
         <div id="qr-generator-screen" class="hidden h-full flex flex-col items-center justify-center p-8 bg-black">
             <div class="animate-fade-in w-full max-w-sm text-center">
                 <h2 class="text-2xl font-bold mb-4">Your Ping QR</h2>
-                <p class="text-gray-400 mb-8">Have your peer scan this to connect.</p>
+                <p id="qr-status-text" class="text-gray-400 mb-8">Have your peer scan this to connect.</p>
                 <div id="qrcode" class="p-6 bg-white rounded-3xl flex items-center justify-center"></div>
                 <button onclick="changeScreen('main-screen', true)" class="mt-12 w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-4 px-6 rounded-full transition-colors duration-300">Back</button>
             </div>
@@ -149,10 +157,10 @@
                  <h2 class="text-2xl font-bold mb-4">Facial Proof</h2>
                  <p class="text-gray-400 mb-8">Center your face in the camera to verify.</p>
                  <div class="w-full aspect-square rounded-full overflow-hidden bg-gray-900 flex items-center justify-center">
-                    <!-- Placeholder for camera feed -->
-                    <svg class="w-24 h-24 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    <video id="face-scan-video" autoplay playsinline class="hidden"></video>
                  </div>
-                 <button onclick="simulateFaceScan()" class="mt-8 w-full bg-[#0052A2] hover:bg-[#004182] text-white font-bold py-4 px-6 rounded-full transition-colors duration-300">Scan Face & Send</button>
+                 <button onclick="sendFaceScan()" class="mt-8 w-full bg-[#0052A2] hover:bg-[#004182] text-white font-bold py-4 px-6 rounded-full transition-colors duration-300">Scan Face & Send</button>
+                 <canvas id="face-scan-canvas" class="hidden"></canvas>
             </div>
         </div>
 
@@ -181,11 +189,12 @@
     <div id="modal-container" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-8 z-50 hidden">
         <!-- Ping Request Modal -->
         <div id="ping-request-modal" class="bg-gray-900 rounded-3xl p-8 w-full max-w-sm text-center hidden animate-fade-in">
-             <h3 class="text-2xl font-bold mb-4">Ping Request Incoming</h3>
-             <p class="text-gray-400 mb-8">Your peer wants to establish a full connection.</p>
+             <h3 class="text-2xl font-bold mb-2">Ping Request</h3>
+             <p class="text-gray-400 mb-6" id="ping-request-user-text"></p>
+             <img id="ping-request-image" src="" class="rounded-2xl mb-6 w-full object-cover aspect-square">
              <div class="flex gap-4">
                  <button onclick="declinePingRequest()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-5 rounded-full transition-colors duration-300">Decline</button>
-                 <button onclick="acceptPingRequest()" class="flex-1 bg-[#0052A2] hover:bg-[#004182] text-white font-bold py-3 px-5 rounded-full transition-colors duration-300">Accept</button>
+                 <button onclick="acceptPingRequest()" class="flex-1 bg-[#0052A2] hover:bg-[#004182] text-white font-bold py-3 px-5 rounded-full transition-colors duration-300">Accept & Reply</button>
              </div>
         </div>
     </div>
@@ -195,13 +204,17 @@
         // --- STATE MANAGEMENT ---
         let currentState = {
             currentScreen: 'loading-screen',
+            role: 'none', // 'initiator' (scans) or 'receiver' (shows QR)
             connection: null, // { id: '...', peerUsername: '...' }
             localUsername: null,
             pingState: 'idle', // 'initiated', 'awaiting_response', 'accepted'
             messages: [],
+            pendingPingData: null,
         };
         const LS_KEY = 'gipi_state';
         let html5QrCode = null;
+        let cameraStream = null;
+        let pingListenerInterval = null;
 
 
         // --- SCREEN MANAGEMENT ---
@@ -212,6 +225,12 @@
         ];
 
         function changeScreen(newScreenId, skipAnimation = false) {
+            stopCamera(); // Stop any active camera when changing screens
+            if (pingListenerInterval) {
+                clearInterval(pingListenerInterval);
+                pingListenerInterval = null;
+            }
+
             const oldScreen = document.getElementById(currentState.currentScreen);
             const newScreen = document.getElementById(newScreenId);
 
@@ -239,7 +258,6 @@
             
             if (currentState.currentScreen === 'loading-screen') {
                 setTimeout(() => {
-                    // Check if a connection exists from a previous session
                     if (currentState.connection) {
                         setupConnectedScreen();
                         changeScreen('connected-screen');
@@ -251,7 +269,6 @@
                     }
                 }, 3000);
             } else {
-                // Restore previous state immediately
                 document.getElementById('loading-screen').classList.add('hidden');
                 document.getElementById(currentState.currentScreen).classList.remove('hidden');
                  if(currentState.currentScreen === 'main-screen') renderMainScreen('buttons');
@@ -286,12 +303,8 @@
         }
 
         function requestNotifications() {
-            // In a real app, this would be Notification.requestPermission()
             console.log("Notification permission requested.");
-            // Assuming user accepts
-            setTimeout(() => {
-                renderMainScreen('buttons');
-            }, 300);
+            setTimeout(() => { renderMainScreen('buttons'); }, 300);
         }
 
         function declineNotifications() {
@@ -301,35 +314,58 @@
         // --- QR CODE & CONNECTION LOGIC ---
         function generateQR() {
             const qrElement = document.getElementById('qrcode');
-            qrElement.innerHTML = ''; // Clear previous QR
+            qrElement.innerHTML = ''; 
             
             if(!currentState.localUsername) {
                 currentState.localUsername = generateRandomUsername();
             }
+            currentState.role = 'receiver';
 
             const connectionId = 'gipi-conn-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
             const qrData = JSON.stringify({ connectionId, username: currentState.localUsername });
             
-            new QRCode(qrElement, {
-                text: qrData,
-                width: 256,
-                height: 256,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
-            });
-
+            new QRCode(qrElement, { text: qrData, width: 256, height: 256 });
+            
+            listenForPing(connectionId);
             changeScreen('qr-generator-screen');
+            const statusText = document.getElementById('qr-status-text');
+            statusText.textContent = "Listening for connection...";
+            statusText.classList.add('animate-pulse-subtle');
+        }
+        
+        function listenForPing(connectionId) {
+            // This simulates the receiver listening for a ping from the initiator.
+            // In a real app, this would be a WebSocket or push notification.
+            // We use localStorage as a bridge for this simulation.
+            if(pingListenerInterval) clearInterval(pingListenerInterval);
+            
+            pingListenerInterval = setInterval(() => {
+                const pingDataRaw = localStorage.getItem('gipi_ping_' + connectionId);
+                if (pingDataRaw) {
+                    clearInterval(pingListenerInterval);
+                    pingListenerInterval = null;
+                    
+                    const pingData = JSON.parse(pingDataRaw);
+                    currentState.pendingPingData = pingData;
+                    currentState.pendingPingData.connectionId = connectionId;
+
+                    document.getElementById('ping-request-user-text').textContent = `${pingData.fromUsername} wants to connect.`;
+                    document.getElementById('ping-request-image').src = pingData.faceProof;
+                    
+                    showModal('ping-request-modal');
+                    localStorage.removeItem('gipi_ping_' + connectionId); // Clean up
+                }
+            }, 2000);
         }
 
         function startScanner() {
+            currentState.role = 'initiator';
             changeScreen('qr-scanner-screen');
             html5QrCode = new Html5Qrcode("qr-scanner");
             const config = { fps: 10, qrbox: { width: 250, height: 250 } };
             
-            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanError)
+            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
                 .catch(err => {
-                    console.error("Unable to start scanning.", err);
                     alert("Could not start camera. Please ensure permissions are granted.");
                     changeScreen('main-screen', true);
                 });
@@ -337,34 +373,21 @@
         
         function stopScannerAndGoBack() {
              if (html5QrCode && html5QrCode.isScanning) {
-                html5QrCode.stop().then(() => {
-                    console.log("QR Code scanning stopped.");
-                }).catch(err => {
-                    console.error("Failed to stop QR Code scanning.", err);
-                }).finally(() => {
-                    html5QrCode = null;
-                    changeScreen('main-screen', true);
-                });
+                html5QrCode.stop().catch(err => console.error("Error stopping scanner.", err))
+                    .finally(() => { html5QrCode = null; changeScreen('main-screen', true); });
             } else {
                  changeScreen('main-screen', true);
             }
         }
 
         function onScanSuccess(decodedText, decodedResult) {
-            console.log(`Scan result: ${decodedText}`);
             try {
                 const data = JSON.parse(decodedText);
                 if(data.connectionId && data.connectionId.startsWith('gipi-conn-') && data.username) {
                     html5QrCode.stop();
                     establishConnection(data.connectionId, data.username);
                 }
-            } catch (e) {
-                console.warn("Scanned QR is not a valid GIPI code.");
-            }
-        }
-
-        function onScanError(errorMessage) {
-            // handle scan error, usually ignore it.
+            } catch (e) { /* ignore non-gipi QR codes */ }
         }
 
         function establishConnection(id, peerUsername) {
@@ -382,25 +405,22 @@
             document.getElementById('local-username-display').textContent = currentState.localUsername;
             document.getElementById('peer-username-display').textContent = currentState.connection.peerUsername;
             
-            // Reset ping state view
             document.getElementById('connection-status').classList.add('hidden');
             document.getElementById('ping-user-button').classList.remove('hidden');
             document.getElementById('ping-user-button').disabled = false;
             document.getElementById('ping-user-button').textContent = "Ping";
 
-            // Restore ping state from previous session if any
-            if(currentState.pingState === 'awaiting_response') {
-                showAwaitingStatus();
-            } else if (currentState.pingState === 'accepted') {
+            if(currentState.pingState === 'awaiting_response') showAwaitingStatus();
+            else if (currentState.pingState === 'accepted') {
                  changeScreen('chat-room-screen');
                  setupChatRoom();
             }
         }
         
         function shatterConnection() {
-            // In a real app, this would notify the other user.
             console.log("Connection shattered.");
             currentState.connection = null;
+            currentState.role = 'none';
             currentState.pingState = 'idle';
             currentState.messages = [];
             saveState(); // Save the shattered state
@@ -408,28 +428,67 @@
             changeScreen('main-screen');
         }
 
+        // --- CAMERA ---
+        async function startCamera(videoId) {
+            stopCamera(); // Ensure no other stream is running
+            try {
+                const constraints = { video: { facingMode: 'user' } };
+                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+                const videoElement = document.getElementById(videoId);
+                videoElement.srcObject = cameraStream;
+                videoElement.classList.remove('hidden');
+            } catch (err) {
+                alert('Could not access camera. Please grant permission and try again.');
+                changeScreen('main-screen', true);
+            }
+        }
+
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+        }
+
         // --- PING & FACE SCAN FLOW ---
-        function initiatePing() {
-            // Simulate initiating the ping. In a real app, this would send a message.
+        async function initiatePing() {
             currentState.pingState = 'initiated';
             updateLastActivity();
+            await startCamera('face-scan-video');
             changeScreen('face-scan-screen');
         }
 
-        function simulateFaceScan() {
-            // This simulates taking a picture and sending the ping request
-            currentState.pingState = 'awaiting_response';
-            updateLastActivity();
-            setupConnectedScreen();
-            showAwaitingStatus();
-            changeScreen('connected-screen');
+        function sendFaceScan() {
+            const video = document.getElementById('face-scan-video');
+            const canvas = document.getElementById('face-scan-canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context.scale(-1, 1); // Flip horizontally
+            context.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+            
+            const faceProofUrl = canvas.toDataURL('image/jpeg', 0.8);
+            stopCamera();
 
-            // --- SIMULATION of peer receiving request ---
-            // This timeout simulates the network delay and the peer receiving the notification.
-            setTimeout(() => {
-                console.log("Peer has received ping request.");
-                showModal('ping-request-modal');
-            }, 2000);
+            if (currentState.role === 'initiator') {
+                // Initiator sends the first ping
+                const pingData = { faceProof: faceProofUrl, fromUsername: currentState.localUsername };
+                localStorage.setItem('gipi_ping_' + currentState.connection.id, JSON.stringify(pingData));
+                
+                currentState.pingState = 'awaiting_response';
+                updateLastActivity();
+                setupConnectedScreen();
+                showAwaitingStatus();
+                changeScreen('connected-screen');
+            } else if (currentState.role === 'receiver') {
+                // Receiver is replying to a ping
+                // In a real app, this would be sent back to the initiator
+                console.log("Receiver sent face proof back.");
+                currentState.pingState = 'accepted';
+                updateLastActivity();
+                setupChatRoom();
+                changeScreen('chat-room-screen');
+            }
         }
 
         function showAwaitingStatus() {
@@ -441,27 +500,24 @@
             pingButton.textContent = "Pending";
         }
         
-        function acceptPingRequest() {
-             // The peer accepts, now they need to do their face scan
+        async function acceptPingRequest() {
             hideModal();
+            const { connectionId, fromUsername } = currentState.pendingPingData;
+            currentState.connection = { id: connectionId, peerUsername: fromUsername };
+            currentState.pendingPingData = null;
+            
+            await startCamera('face-scan-video');
             changeScreen('face-scan-screen'); 
-            // After their scan, they would send an 'accepted' message back.
-            // Here, we simulate it directly in the scan function
-            window.simulateFaceScan = () => {
-                currentState.pingState = 'accepted';
-                updateLastActivity();
-                setupChatRoom();
-                changeScreen('chat-room-screen');
-            };
         }
 
         function declinePingRequest() {
             hideModal();
-            // Simulate sending a 'declined' message back
-            currentState.pingState = 'idle';
-            updateLastActivity();
-            setupConnectedScreen(); // Resets the button and status
             console.log("Peer declined the request.");
+            currentState.pendingPingData = null;
+            // Go back to listening
+            const statusText = document.getElementById('qr-status-text');
+            statusText.textContent = "Listening for connection...";
+            statusText.classList.add('animate-pulse-subtle');
         }
         
         // --- CHAT ROOM ---
@@ -478,16 +534,13 @@
                 input.value = '';
                 updateLastActivity();
                 renderMessages();
-                
-                // Simulate peer response
                 setTimeout(simulatePeerMessage, 1500 + Math.random() * 1000);
             }
         }
         
         function simulatePeerMessage() {
-            const responses = ["Got it.", "Okay.", "...", "Received.", "Makes sense.", "Interesting."];
-            const text = responses[Math.floor(Math.random() * responses.length)];
-            currentState.messages.push({ sender: 'peer', text: text, timestamp: new Date() });
+            const responses = ["Got it.", "Okay.", "...", "Received.", "Makes sense."];
+            currentState.messages.push({ sender: 'peer', text: responses[Math.floor(Math.random() * responses.length)], timestamp: new Date() });
             renderMessages();
         }
 
@@ -498,11 +551,7 @@
                 const bubble = document.createElement('div');
                 bubble.textContent = msg.text;
                 bubble.classList.add('chat-bubble', 'p-3', 'rounded-2xl');
-                if (msg.sender === 'user') {
-                    bubble.classList.add('chat-bubble-user');
-                } else {
-                    bubble.classList.add('chat-bubble-peer');
-                }
+                bubble.classList.add(msg.sender === 'user' ? 'chat-bubble-user' : 'chat-bubble-peer');
                 messagesContainer.appendChild(bubble);
             });
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -536,7 +585,6 @@
                 const thirtyDaysAgo = new Date();
                 thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
                 if (lastActivityDate < thirtyDaysAgo) {
-                    console.log("Shattering connection due to 30 days of inactivity.");
                     shatterConnection();
                 }
             }
@@ -555,7 +603,6 @@
                 const savedState = localStorage.getItem(LS_KEY);
                 if (savedState) {
                     const parsedState = JSON.parse(savedState);
-                    // Don't restore loading screen state, always start there visually
                     if (parsedState.currentScreen !== 'loading-screen') {
                         currentState = parsedState;
                     }
@@ -568,3 +615,4 @@
     </script>
 </body>
 </html>
+
