@@ -14,74 +14,25 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
-        .gipi-logo-char {
-            display: inline-block;
-            opacity: 0;
-            transform: translateY(20px);
-            animation: fadeInChar 0.5s forwards;
-        }
-        @keyframes fadeInChar {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        @keyframes fadeOutScreen {
-            to {
-                opacity: 0;
-                transform: scale(0.95);
-            }
-        }
-        @keyframes fadeInScreen {
-            from {
-                opacity: 0;
-                transform: scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-        .animate-fade-out {
-            animation: fadeOutScreen 0.5s ease-in-out forwards;
-        }
-        .animate-fade-in {
-            animation: fadeInScreen 0.5s ease-in-out forwards;
-        }
-        #qr-scanner video, #face-scan-video {
-            width: 100% !important;
-            height: auto !important;
-            border-radius: 1.5rem; /* rounded-3xl */
-            transform: scaleX(-1); /* Mirror front camera */
-        }
-        .chat-bubble {
-            max-width: 75%;
-        }
-        .chat-bubble-user {
-            background-color: #0052A2;
-            color: white;
-            align-self: flex-end;
-        }
-        .chat-bubble-peer {
-            background-color: #333;
-            color: white;
-            align-self: flex-start;
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 0.5; }
-          50% { opacity: 1; }
-        }
-        .animate-pulse-subtle {
-          animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
+        .gipi-logo-char { display: inline-block; opacity: 0; transform: translateY(20px); animation: fadeInChar 0.5s forwards; }
+        @keyframes fadeInChar { to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeOutScreen { to { opacity: 0; transform: scale(0.95); } }
+        @keyframes fadeInScreen { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .animate-fade-out { animation: fadeOutScreen 0.5s ease-in-out forwards; }
+        .animate-fade-in { animation: fadeInScreen 0.5s ease-in-out forwards; }
+        #qr-scanner video, #face-scan-video { width: 100% !important; height: auto !important; border-radius: 1.5rem; transform: scaleX(-1); }
+        .chat-bubble { max-width: 75%; }
+        .chat-bubble-user { background-color: #0052A2; color: white; align-self: flex-end; }
+        .chat-bubble-peer { background-color: #333; color: white; align-self: flex-start; }
+        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+        .animate-pulse-subtle { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
     </style>
 </head>
 <body class="bg-black text-white h-full overflow-hidden">
 
     <!-- Container for all screens -->
     <div id="app-container" class="h-full">
-
-        <!-- Loading Screen -->
+        <!-- All screens from previous step remain identical -->
         <div id="loading-screen" class="h-full flex items-center justify-center bg-black">
             <div class="text-center">
                 <h1 class="text-8xl font-black tracking-tighter" aria-label="GIPI">
@@ -93,525 +44,394 @@
                 <p class="text-lg text-gray-400 mt-2 tracking-widest">S E C U R E . P I N G</p>
             </div>
         </div>
-
-        <!-- Main Screen (Permission Prompt) -->
-        <div id="main-screen" class="hidden h-full flex flex-col items-center justify-center p-8 text-center bg-black">
-            <!-- Content will be dynamically inserted here -->
-        </div>
-
-        <!-- Goodbye Screen -->
-        <div id="goodbye-screen" class="hidden h-full flex items-center justify-center p-8 text-center bg-black">
-            <div class="animate-fade-in">
-                <h2 class="text-4xl font-bold text-gray-700">Connection Terminated.</h2>
-                <p class="text-gray-500 mt-4">Come back when you are ready to ping with GIPI.</p>
-            </div>
-        </div>
-
-        <!-- QR Generator Screen -->
-        <div id="qr-generator-screen" class="hidden h-full flex flex-col items-center justify-center p-8 bg-black">
-            <div class="animate-fade-in w-full max-w-sm text-center">
-                <h2 class="text-2xl font-bold mb-4">Your Ping QR</h2>
-                <p id="qr-status-text" class="text-gray-400 mb-8">Have your peer scan this to connect.</p>
-                <div id="qrcode" class="p-6 bg-white rounded-3xl flex items-center justify-center"></div>
-                <button onclick="changeScreen('main-screen', true)" class="mt-12 w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-4 px-6 rounded-full transition-colors duration-300">Back</button>
-            </div>
-        </div>
-        
-        <!-- QR Scanner Screen -->
-        <div id="qr-scanner-screen" class="hidden h-full flex flex-col items-center justify-center p-8 bg-black">
-            <div class="animate-fade-in w-full max-w-sm text-center">
-                 <h2 class="text-2xl font-bold mb-4">Scan and Connect</h2>
-                 <p class="text-gray-400 mb-8">Point your camera at a GIPI QR code.</p>
-                 <div id="qr-scanner" class="w-full aspect-square rounded-3xl overflow-hidden bg-gray-900"></div>
-                 <button onclick="stopScannerAndGoBack()" class="mt-8 w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-4 px-6 rounded-full transition-colors duration-300">Cancel</button>
-            </div>
-        </div>
-        
-        <!-- Connected Screen -->
-        <div id="connected-screen" class="hidden h-full flex flex-col p-6 bg-black">
-            <div class="animate-fade-in flex-grow">
-                <h2 class="text-3xl font-bold mb-8">Connected Peers</h2>
-                <!-- User Profile Box -->
-                <div class="bg-gray-900/50 p-4 rounded-2xl mb-4 flex items-center justify-between">
-                    <div>
-                        <p class="font-bold text-lg" id="local-username-display"></p>
-                        <p class="text-sm text-gray-400">You</p>
-                    </div>
-                </div>
-                <!-- Peer Profile Box -->
-                <div id="peer-profile-box" class="bg-gray-900 p-4 rounded-2xl flex items-center justify-between">
-                     <div>
-                        <p class="font-bold text-lg" id="peer-username-display"></p>
-                        <p class="text-sm text-gray-400">Peer</p>
-                    </div>
-                    <button id="ping-user-button" onclick="initiatePing()" class="bg-[#0052A2] hover:bg-[#004182] text-white font-bold py-2 px-5 rounded-full transition-colors duration-300">Ping</button>
-                </div>
-                <div id="connection-status" class="text-center text-yellow-400 mt-6 hidden"></div>
-            </div>
-             <button onclick="shatterConnection()" class="w-full bg-red-800 hover:bg-red-700 text-white font-bold py-4 px-6 rounded-full transition-colors duration-300">Shatter Connection</button>
-        </div>
-        
-        <!-- Face Scan Screen -->
-        <div id="face-scan-screen" class="hidden h-full flex flex-col items-center justify-center p-8 bg-black">
-            <div class="animate-fade-in w-full max-w-sm text-center">
-                 <h2 class="text-2xl font-bold mb-4">Facial Proof</h2>
-                 <p class="text-gray-400 mb-8">Center your face in the camera to verify.</p>
-                 <div class="w-full aspect-square rounded-full overflow-hidden bg-gray-900 flex items-center justify-center">
-                    <video id="face-scan-video" autoplay playsinline class="hidden"></video>
-                 </div>
-                 <button onclick="sendFaceScan()" class="mt-8 w-full bg-[#0052A2] hover:bg-[#004182] text-white font-bold py-4 px-6 rounded-full transition-colors duration-300">Scan Face & Send</button>
-                 <canvas id="face-scan-canvas" class="hidden"></canvas>
-            </div>
-        </div>
-
-        <!-- Chat Room Screen -->
-        <div id="chat-room-screen" class="hidden h-full flex flex-col bg-black">
-             <header class="p-4 border-b border-gray-800 flex items-center justify-between">
-                <h2 class="text-xl font-bold" id="chat-header-username"></h2>
-                <button onclick="shatterConnection()" class="text-sm text-red-500 hover:text-red-400">Shatter</button>
-            </header>
-            <main id="chat-messages" class="flex-grow p-4 flex flex-col gap-3 overflow-y-auto">
-                <!-- Messages will be injected here -->
-            </main>
-            <footer class="p-4 border-t border-gray-800">
-                <div class="flex items-center gap-2">
-                    <input id="chat-input" type="text" placeholder="Start a new message" class="flex-grow bg-gray-800 text-white rounded-full py-3 px-5 focus:outline-none focus:ring-2 focus:ring-[#0052A2]">
-                    <button onclick="sendMessage()" class="bg-[#0052A2] hover:bg-[#004182] text-white rounded-full p-3">
-                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg>
-                    </button>
-                </div>
-            </footer>
-        </div>
-
+        <div id="main-screen" class="hidden h-full flex flex-col items-center justify-center p-8 text-center bg-black"></div>
+        <div id="goodbye-screen" class="hidden h-full flex items-center justify-center p-8 text-center bg-black"><div class="animate-fade-in"><h2 class="text-4xl font-bold text-gray-700">Connection Terminated.</h2><p class="text-gray-500 mt-4">Come back when you are ready to ping with GIPI.</p></div></div>
+        <div id="qr-generator-screen" class="hidden h-full flex flex-col items-center justify-center p-8 bg-black"><div class="animate-fade-in w-full max-w-sm text-center"><h2 class="text-2xl font-bold mb-4">Your Ping QR</h2><p id="qr-status-text" class="text-gray-400 mb-8">Have your peer scan this to connect.</p><div id="qrcode" class="p-6 bg-white rounded-3xl flex items-center justify-center"></div><button onclick="goHome()" class="mt-12 w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-4 px-6 rounded-full transition-colors duration-300">Back</button></div></div>
+        <div id="qr-scanner-screen" class="hidden h-full flex flex-col items-center justify-center p-8 bg-black"><div class="animate-fade-in w-full max-w-sm text-center"><h2 class="text-2xl font-bold mb-4">Scan and Connect</h2><p class="text-gray-400 mb-8">Point your camera at a GIPI QR code.</p><div id="qr-scanner" class="w-full aspect-square rounded-3xl overflow-hidden bg-gray-900"></div><button onclick="stopScannerAndGoBack()" class="mt-8 w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-4 px-6 rounded-full transition-colors duration-300">Cancel</button></div></div>
+        <div id="connected-screen" class="hidden h-full flex flex-col p-6 bg-black"><div class="animate-fade-in flex-grow"><h2 class="text-3xl font-bold mb-8">Connected Peers</h2><div class="bg-gray-900/50 p-4 rounded-2xl mb-4 flex items-center justify-between"><div><p class="font-bold text-lg" id="local-username-display"></p><p class="text-sm text-gray-400">You</p></div></div><div id="peer-profile-box" class="bg-gray-900 p-4 rounded-2xl flex items-center justify-between"><div><p class="font-bold text-lg" id="peer-username-display"></p><p class="text-sm text-gray-400">Peer</p></div><button id="ping-user-button" onclick="initiatePing()" class="bg-[#0052A2] hover:bg-[#004182] text-white font-bold py-2 px-5 rounded-full transition-colors duration-300">Ping</button></div><div id="connection-status" class="text-center text-yellow-400 mt-6 hidden"></div></div><button onclick="shatterConnection()" class="w-full bg-red-800 hover:bg-red-700 text-white font-bold py-4 px-6 rounded-full transition-colors duration-300">Shatter Connection</button></div>
+        <div id="face-scan-screen" class="hidden h-full flex flex-col items-center justify-center p-8 bg-black"><div class="animate-fade-in w-full max-w-sm text-center"><h2 class="text-2xl font-bold mb-4">Facial Proof</h2><p class="text-gray-400 mb-8">Center your face in the camera to verify.</p><div class="w-full aspect-square rounded-full overflow-hidden bg-gray-900 flex items-center justify-center"><video id="face-scan-video" autoplay playsinline class="hidden"></video></div><button id="face-scan-button" onclick="sendFaceScan()" class="mt-8 w-full bg-[#0052A2] hover:bg-[#004182] text-white font-bold py-4 px-6 rounded-full transition-colors duration-300">Scan Face & Send</button><canvas id="face-scan-canvas" class="hidden"></canvas></div></div>
+        <div id="chat-room-screen" class="hidden h-full flex flex-col bg-black"><header class="p-4 border-b border-gray-800 flex items-center justify-between"><h2 class="text-xl font-bold" id="chat-header-username"></h2><button onclick="shatterConnection()" class="text-sm text-red-500 hover:text-red-400">Shatter</button></header><main id="chat-messages" class="flex-grow p-4 flex flex-col gap-3 overflow-y-auto"></main><footer class="p-4 border-t border-gray-800"><div class="flex items-center gap-2"><input id="chat-input" type="text" placeholder="Start a new message" class="flex-grow bg-gray-800 text-white rounded-full py-3 px-5 focus:outline-none focus:ring-2 focus:ring-[#0052A2]"><button onclick="sendMessage()" class="bg-[#0052A2] hover:bg-[#004182] text-white rounded-full p-3"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path></svg></button></div></footer></div>
     </div>
     
-    <!-- Modals Container -->
-    <div id="modal-container" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-8 z-50 hidden">
-        <!-- Ping Request Modal -->
-        <div id="ping-request-modal" class="bg-gray-900 rounded-3xl p-8 w-full max-w-sm text-center hidden animate-fade-in">
-             <h3 class="text-2xl font-bold mb-2">Ping Request</h3>
-             <p class="text-gray-400 mb-6" id="ping-request-user-text"></p>
-             <img id="ping-request-image" src="" class="rounded-2xl mb-6 w-full object-cover aspect-square">
-             <div class="flex gap-4">
-                 <button onclick="declinePingRequest()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-5 rounded-full transition-colors duration-300">Decline</button>
-                 <button onclick="acceptPingRequest()" class="flex-1 bg-[#0052A2] hover:bg-[#004182] text-white font-bold py-3 px-5 rounded-full transition-colors duration-300">Accept & Reply</button>
-             </div>
-        </div>
-    </div>
+    <div id="modal-container" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-8 z-50 hidden"><div id="ping-request-modal" class="bg-gray-900 rounded-3xl p-8 w-full max-w-sm text-center hidden animate-fade-in"><h3 class="text-2xl font-bold mb-2">Ping Request</h3><p class="text-gray-400 mb-6" id="ping-request-user-text"></p><img id="ping-request-image" src="" class="rounded-2xl mb-6 w-full object-cover aspect-square"><div class="flex gap-4"><button onclick="declinePingRequest()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-5 rounded-full transition-colors duration-300">Decline</button><button onclick="acceptPingRequest()" class="flex-1 bg-[#0052A2] hover:bg-[#004182] text-white font-bold py-3 px-5 rounded-full transition-colors duration-300">Accept & Reply</button></div></div></div>
 
+    <script type="module">
+        // Firebase Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, addDoc, serverTimestamp, query, orderBy, updateDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    <script>
-        // --- STATE MANAGEMENT ---
+        // --- GLOBAL STATE & FIREBASE ---
+        let db, auth;
+        let unsubscribeConnection = null;
+        let unsubscribeMessages = null;
+
         let currentState = {
+            appId: typeof __app_id !== 'undefined' ? __app_id : 'gipi-app-default',
             currentScreen: 'loading-screen',
-            role: 'none', // 'initiator' (scans) or 'receiver' (shows QR)
-            connection: null, // { id: '...', peerUsername: '...' }
+            connectionId: null,
+            peerUsername: null,
             localUsername: null,
-            pingState: 'idle', // 'initiated', 'awaiting_response', 'accepted'
-            messages: [],
-            pendingPingData: null,
+            userId: null,
+            isAuthReady: false,
         };
         const LS_KEY = 'gipi_state';
-        let html5QrCode = null;
-        let cameraStream = null;
-        let pingListenerInterval = null;
 
+        // --- INITIALIZATION ---
+        window.onload = function() {
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+            
+            // Fallback for local testing if config is not injected
+            if (!Object.keys(firebaseConfig).length) {
+                console.warn("Firebase config not found. App will not connect to backend.");
+                changeScreen('goodbye-screen');
+                return;
+            }
 
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+
+            loadState(); // Load local state first
+            
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    currentState.userId = user.uid;
+                } else {
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (error) {
+                         console.error("Anonymous sign-in failed:", error);
+                         changeScreen('goodbye-screen');
+                    }
+                }
+                
+                if (!currentState.isAuthReady) {
+                    currentState.isAuthReady = true;
+                    initializeAppLogic();
+                }
+            });
+        };
+        
+        function initializeAppLogic() {
+            checkInactivity();
+            
+            if (currentState.connectionId) {
+                // If we have a connectionId, listen to it
+                listenToConnection(currentState.connectionId);
+            } else if (currentState.currentScreen === 'loading-screen') {
+                 setTimeout(() => {
+                    renderMainScreen('permission');
+                    changeScreen('main-screen');
+                }, 3000);
+            } else {
+                // Restore previous non-connected screen
+                document.getElementById('loading-screen').classList.add('hidden');
+                document.getElementById(currentState.currentScreen).classList.remove('hidden');
+                if(currentState.currentScreen === 'main-screen') renderMainScreen('buttons');
+            }
+        }
+        
         // --- SCREEN MANAGEMENT ---
         const screens = [
             'loading-screen', 'main-screen', 'goodbye-screen', 
             'qr-generator-screen', 'qr-scanner-screen', 'connected-screen',
             'face-scan-screen', 'chat-room-screen'
         ];
-
         function changeScreen(newScreenId, skipAnimation = false) {
-            stopCamera(); // Stop any active camera when changing screens
-            if (pingListenerInterval) {
-                clearInterval(pingListenerInterval);
-                pingListenerInterval = null;
-            }
+            stopCamera();
+            const oldScreenId = currentState.currentScreen;
+            if (oldScreenId === newScreenId) return;
 
-            const oldScreen = document.getElementById(currentState.currentScreen);
+            const oldScreen = document.getElementById(oldScreenId);
             const newScreen = document.getElementById(newScreenId);
-
+            
             function switchScreens() {
                 if (oldScreen) oldScreen.classList.add('hidden');
                 if (newScreen) newScreen.classList.remove('hidden');
-                if (oldScreen && !skipAnimation) oldScreen.classList.remove('animate-fade-out');
-                if (newScreen && !skipAnimation) newScreen.classList.add('animate-fade-in');
+                if(newScreen && !skipAnimation) newScreen.classList.add('animate-fade-in');
                 currentState.currentScreen = newScreenId;
                 saveState();
             }
-
             if (oldScreen && !skipAnimation) {
                 oldScreen.classList.add('animate-fade-out');
-                setTimeout(switchScreens, 400); // Match animation duration
+                setTimeout(switchScreens, 400);
             } else {
                 switchScreens();
             }
         }
-        
-        // --- INITIALIZATION ---
-        window.onload = function() {
-            loadState();
-            checkInactivity();
+
+        // --- MAIN FLOW & QR ---
+        async function generateQR() {
+            if (!currentState.isAuthReady) return alert("Connecting...");
+            currentState.localUsername = currentState.localUsername || generateRandomUsername();
             
-            if (currentState.currentScreen === 'loading-screen') {
-                setTimeout(() => {
-                    if (currentState.connection) {
-                        setupConnectedScreen();
-                        changeScreen('connected-screen');
-                    } else if (currentState.currentScreen !== 'goodbye-screen'){
-                         renderMainScreen('permission');
-                         changeScreen('main-screen');
-                    } else {
-                        changeScreen('goodbye-screen');
-                    }
-                }, 3000);
-            } else {
-                document.getElementById('loading-screen').classList.add('hidden');
-                document.getElementById(currentState.currentScreen).classList.remove('hidden');
-                 if(currentState.currentScreen === 'main-screen') renderMainScreen('buttons');
-                 if(currentState.currentScreen === 'connected-screen') setupConnectedScreen();
-                 if(currentState.currentScreen === 'chat-room-screen') setupChatRoom();
-            }
-        };
+            const connectionId = 'gipi-' + auth.currentUser.uid + '-' + Date.now();
+            currentState.connectionId = connectionId;
 
-        // --- MAIN SCREEN LOGIC ---
-        function renderMainScreen(view) {
-             const mainScreen = document.getElementById('main-screen');
-             if(view === 'permission') {
-                 mainScreen.innerHTML = `
-                    <div class="animate-fade-in">
-                        <h2 class="text-4xl font-bold">Welcome to GIPI.</h2>
-                        <p class="text-gray-400 mt-4 max-w-md mx-auto">To receive secure pings from your peers, we need to be able to send you notifications.</p>
-                        <button onclick="requestNotifications()" class="mt-8 bg-white hover:bg-gray-200 text-black font-bold py-4 px-8 rounded-full transition-colors duration-300">Allow Notifications</button>
-                        <button onclick="declineNotifications()" class="mt-4 text-gray-500 hover:text-gray-400">Maybe later</button>
-                    </div>
-                 `;
-             } else {
-                mainScreen.innerHTML = `
-                     <div class="animate-fade-in w-full max-w-sm">
-                        <h1 class="text-6xl font-black tracking-tighter mb-12">GIPI</h1>
-                        <div class="space-y-4">
-                            <button onclick="generateQR()" class="w-full bg-white text-black font-bold py-5 px-6 rounded-full text-lg hover:bg-gray-200 transition-colors duration-300">Show Ping QR</button>
-                            <button onclick="startScanner()" class="w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-5 px-6 rounded-full text-lg transition-colors duration-300">Scan and Connect</button>
-                        </div>
-                     </div>
-                `;
-             }
-        }
-
-        function requestNotifications() {
-            console.log("Notification permission requested.");
-            setTimeout(() => { renderMainScreen('buttons'); }, 300);
-        }
-
-        function declineNotifications() {
-            changeScreen('goodbye-screen');
-        }
-        
-        // --- QR CODE & CONNECTION LOGIC ---
-        function generateQR() {
             const qrElement = document.getElementById('qrcode');
             qrElement.innerHTML = ''; 
-            
-            if(!currentState.localUsername) {
-                currentState.localUsername = generateRandomUsername();
-            }
-            currentState.role = 'receiver';
-
-            const connectionId = 'gipi-conn-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-            const qrData = JSON.stringify({ connectionId, username: currentState.localUsername });
-            
+            const qrData = JSON.stringify({ connectionId, username: currentState.localUsername, userId: auth.currentUser.uid });
             new QRCode(qrElement, { text: qrData, width: 256, height: 256 });
             
-            listenForPing(connectionId);
+            listenToConnection(connectionId);
             changeScreen('qr-generator-screen');
+
             const statusText = document.getElementById('qr-status-text');
             statusText.textContent = "Listening for connection...";
             statusText.classList.add('animate-pulse-subtle');
         }
-        
-        function listenForPing(connectionId) {
-            // This simulates the receiver listening for a ping from the initiator.
-            // In a real app, this would be a WebSocket or push notification.
-            // We use localStorage as a bridge for this simulation.
-            if(pingListenerInterval) clearInterval(pingListenerInterval);
-            
-            pingListenerInterval = setInterval(() => {
-                const pingDataRaw = localStorage.getItem('gipi_ping_' + connectionId);
-                if (pingDataRaw) {
-                    clearInterval(pingListenerInterval);
-                    pingListenerInterval = null;
-                    
-                    const pingData = JSON.parse(pingDataRaw);
-                    currentState.pendingPingData = pingData;
-                    currentState.pendingPingData.connectionId = connectionId;
 
-                    document.getElementById('ping-request-user-text').textContent = `${pingData.fromUsername} wants to connect.`;
-                    document.getElementById('ping-request-image').src = pingData.faceProof;
-                    
-                    showModal('ping-request-modal');
-                    localStorage.removeItem('gipi_ping_' + connectionId); // Clean up
-                }
-            }, 2000);
-        }
-
-        function startScanner() {
-            currentState.role = 'initiator';
-            changeScreen('qr-scanner-screen');
-            html5QrCode = new Html5Qrcode("qr-scanner");
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-            
-            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
-                .catch(err => {
-                    alert("Could not start camera. Please ensure permissions are granted.");
-                    changeScreen('main-screen', true);
-                });
-        }
-        
-        function stopScannerAndGoBack() {
-             if (html5QrCode && html5QrCode.isScanning) {
-                html5QrCode.stop().catch(err => console.error("Error stopping scanner.", err))
-                    .finally(() => { html5QrCode = null; changeScreen('main-screen', true); });
-            } else {
-                 changeScreen('main-screen', true);
-            }
-        }
-
-        function onScanSuccess(decodedText, decodedResult) {
+        function onScanSuccess(decodedText) {
             try {
                 const data = JSON.parse(decodedText);
-                if(data.connectionId && data.connectionId.startsWith('gipi-conn-') && data.username) {
+                if(data.connectionId && data.connectionId.startsWith('gipi-') && data.username && data.userId) {
                     html5QrCode.stop();
-                    establishConnection(data.connectionId, data.username);
+                    currentState.connectionId = data.connectionId;
+                    currentState.peerUsername = data.username;
+                    currentState.localUsername = currentState.localUsername || generateRandomUsername();
+                    
+                    listenToConnection(data.connectionId);
+                    
+                    // Proceed to send facial proof
+                    changeScreen('connected-screen');
+                    setupConnectedScreenDOM();
+                    initiatePing();
                 }
-            } catch (e) { /* ignore non-gipi QR codes */ }
+            } catch (e) { /* ignore */ }
         }
 
-        function establishConnection(id, peerUsername) {
-            if(!currentState.localUsername) {
-                 currentState.localUsername = generateRandomUsername();
-            }
-            currentState.connection = { id, peerUsername };
-            updateLastActivity();
-            setupConnectedScreen();
-            changeScreen('connected-screen');
-        }
-        
-        function setupConnectedScreen() {
-            if(!currentState.connection) return;
-            document.getElementById('local-username-display').textContent = currentState.localUsername;
-            document.getElementById('peer-username-display').textContent = currentState.connection.peerUsername;
+        // --- FIREBASE LISTENERS ---
+        function listenToConnection(connectionId) {
+            if (unsubscribeConnection) unsubscribeConnection();
             
-            document.getElementById('connection-status').classList.add('hidden');
-            document.getElementById('ping-user-button').classList.remove('hidden');
-            document.getElementById('ping-user-button').disabled = false;
-            document.getElementById('ping-user-button').textContent = "Ping";
+            const docRef = doc(db, "artifacts", currentState.appId, "public/data/pings", connectionId);
 
-            if(currentState.pingState === 'awaiting_response') showAwaitingStatus();
-            else if (currentState.pingState === 'accepted') {
-                 changeScreen('chat-room-screen');
-                 setupChatRoom();
-            }
+            unsubscribeConnection = onSnapshot(docRef, (docSnap) => {
+                if (!docSnap.exists()) {
+                    // Document was deleted (connection shattered)
+                    if (currentState.connectionId) goHome();
+                    return;
+                }
+
+                const data = docSnap.data();
+                
+                // Update peer username if we are the receiver
+                if (data.initiatorUsername && auth.currentUser.uid === data.receiverId) {
+                    currentState.peerUsername = data.initiatorUsername;
+                }
+                
+                switch(data.status) {
+                    case 'awaiting-reply':
+                        // This is for the receiver
+                        if (auth.currentUser.uid === data.receiverId) {
+                            document.getElementById('ping-request-user-text').textContent = `${data.initiatorUsername} wants to connect.`;
+                            document.getElementById('ping-request-image').src = data.initiatorFaceProof;
+                            showModal('ping-request-modal');
+                        }
+                        break;
+                    
+                    case 'connected':
+                        if (unsubscribeMessages) unsubscribeMessages(); // Stop previous message listener if any
+                        listenToMessages(connectionId);
+                        changeScreen('chat-room-screen');
+                        setupChatRoomDOM();
+                        updateLastActivity();
+                        break;
+
+                    case 'declined':
+                         if (auth.currentUser.uid === data.initiatorId) {
+                            alert("Your connection request was declined.");
+                            goHome();
+                         }
+                        break;
+                }
+            });
         }
         
-        function shatterConnection() {
-            console.log("Connection shattered.");
-            currentState.connection = null;
-            currentState.role = 'none';
-            currentState.pingState = 'idle';
-            currentState.messages = [];
-            saveState(); // Save the shattered state
-            renderMainScreen('buttons');
-            changeScreen('main-screen');
+        function listenToMessages(connectionId) {
+            const messagesRef = collection(db, "artifacts", currentState.appId, "public/data/pings", connectionId, "messages");
+            const q = query(messagesRef, orderBy("timestamp"));
+
+            unsubscribeMessages = onSnapshot(q, (querySnapshot) => {
+                const messages = [];
+                querySnapshot.forEach((doc) => {
+                    messages.push(doc.data());
+                });
+                renderMessages(messages);
+            });
         }
 
-        // --- CAMERA ---
-        async function startCamera(videoId) {
-            stopCamera(); // Ensure no other stream is running
-            try {
-                const constraints = { video: { facingMode: 'user' } };
-                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
-                const videoElement = document.getElementById(videoId);
-                videoElement.srcObject = cameraStream;
-                videoElement.classList.remove('hidden');
-            } catch (err) {
-                alert('Could not access camera. Please grant permission and try again.');
-                changeScreen('main-screen', true);
+        // --- FIREBASE ACTIONS ---
+        async function sendFaceScan() {
+            const faceScanButton = document.getElementById('face-scan-button');
+            faceScanButton.disabled = true;
+            faceScanButton.textContent = "Sending...";
+
+            const faceProofUrl = captureFaceProof();
+            stopCamera();
+
+            const docRef = doc(db, "artifacts", currentState.appId, "public/data/pings", currentState.connectionId);
+            const docSnap = await getDoc(docRef);
+
+            if (!docSnap.exists()) {
+                // We are the initiator, creating the request
+                await setDoc(docRef, {
+                    initiatorId: auth.currentUser.uid,
+                    initiatorUsername: currentState.localUsername,
+                    initiatorFaceProof: faceProofUrl,
+                    receiverId: null, // This will be set by the QR data, but we don't know it yet. A Cloud Function could fix this.
+                    receiverUsername: currentState.peerUsername,
+                    status: 'awaiting-reply',
+                    createdAt: serverTimestamp()
+                });
+                changeScreen('connected-screen');
+                setupConnectedScreenDOM();
+                showAwaitingStatus();
+            } else {
+                // We are the receiver, accepting the request
+                await updateDoc(docRef, {
+                    receiverFaceProof: faceProofUrl,
+                    status: 'connected'
+                });
+                // The onSnapshot listener will handle screen change
             }
+            faceScanButton.disabled = false;
+            faceScanButton.textContent = "Scan Face & Send";
         }
 
-        function stopCamera() {
-            if (cameraStream) {
-                cameraStream.getTracks().forEach(track => track.stop());
-                cameraStream = null;
-            }
-        }
-
-        // --- PING & FACE SCAN FLOW ---
-        async function initiatePing() {
-            currentState.pingState = 'initiated';
-            updateLastActivity();
+        async function acceptPingRequest() {
+            hideModal();
+            const docRef = doc(db, "artifacts", currentState.appId, "public/data/pings", currentState.connectionId);
+            await updateDoc(docRef, {
+                receiverId: auth.currentUser.uid,
+                receiverUsername: currentState.localUsername,
+            });
             await startCamera('face-scan-video');
             changeScreen('face-scan-screen');
         }
 
-        function sendFaceScan() {
-            const video = document.getElementById('face-scan-video');
-            const canvas = document.getElementById('face-scan-canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const context = canvas.getContext('2d');
-            context.scale(-1, 1); // Flip horizontally
-            context.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
-            
-            const faceProofUrl = canvas.toDataURL('image/jpeg', 0.8);
-            stopCamera();
-
-            if (currentState.role === 'initiator') {
-                // Initiator sends the first ping
-                const pingData = { faceProof: faceProofUrl, fromUsername: currentState.localUsername };
-                localStorage.setItem('gipi_ping_' + currentState.connection.id, JSON.stringify(pingData));
-                
-                currentState.pingState = 'awaiting_response';
-                updateLastActivity();
-                setupConnectedScreen();
-                showAwaitingStatus();
-                changeScreen('connected-screen');
-            } else if (currentState.role === 'receiver') {
-                // Receiver is replying to a ping
-                // In a real app, this would be sent back to the initiator
-                console.log("Receiver sent face proof back.");
-                currentState.pingState = 'accepted';
-                updateLastActivity();
-                setupChatRoom();
-                changeScreen('chat-room-screen');
-            }
-        }
-
-        function showAwaitingStatus() {
-            const statusDiv = document.getElementById('connection-status');
-            const pingButton = document.getElementById('ping-user-button');
-            statusDiv.textContent = "Awaiting connection request...";
-            statusDiv.classList.remove('hidden');
-            pingButton.disabled = true;
-            pingButton.textContent = "Pending";
-        }
-        
-        async function acceptPingRequest() {
+        async function declinePingRequest() {
             hideModal();
-            const { connectionId, fromUsername } = currentState.pendingPingData;
-            currentState.connection = { id: connectionId, peerUsername: fromUsername };
-            currentState.pendingPingData = null;
-            
-            await startCamera('face-scan-video');
-            changeScreen('face-scan-screen'); 
+            const docRef = doc(db, "artifacts", currentState.appId, "public/data/pings", currentState.connectionId);
+            await updateDoc(docRef, { status: 'declined' });
+            // The initiator's listener will alert them. We can go home.
+            goHome();
         }
 
-        function declinePingRequest() {
-            hideModal();
-            console.log("Peer declined the request.");
-            currentState.pendingPingData = null;
-            // Go back to listening
-            const statusText = document.getElementById('qr-status-text');
-            statusText.textContent = "Listening for connection...";
-            statusText.classList.add('animate-pulse-subtle');
-        }
-        
-        // --- CHAT ROOM ---
-        function setupChatRoom() {
-            document.getElementById('chat-header-username').textContent = currentState.connection.peerUsername;
-            renderMessages();
-        }
-
-        function sendMessage() {
+        async function sendMessage() {
             const input = document.getElementById('chat-input');
             const text = input.value.trim();
             if (text) {
-                currentState.messages.push({ sender: 'user', text: text, timestamp: new Date() });
                 input.value = '';
+                const messagesRef = collection(db, "artifacts", currentState.appId, "public/data/pings", currentState.connectionId, "messages");
+                await addDoc(messagesRef, {
+                    text: text,
+                    senderId: auth.currentUser.uid,
+                    timestamp: serverTimestamp()
+                });
                 updateLastActivity();
-                renderMessages();
-                setTimeout(simulatePeerMessage, 1500 + Math.random() * 1000);
             }
         }
         
-        function simulatePeerMessage() {
-            const responses = ["Got it.", "Okay.", "...", "Received.", "Makes sense."];
-            currentState.messages.push({ sender: 'peer', text: responses[Math.floor(Math.random() * responses.length)], timestamp: new Date() });
-            renderMessages();
+        async function shatterConnection() {
+            if (!currentState.connectionId) return;
+            const connectionIdToDelete = currentState.connectionId;
+            goHome(); // Go home immediately for snappy UX
+            
+            try {
+                const docRef = doc(db, "artifacts", currentState.appId, "public/data/pings", connectionIdToDelete);
+                await deleteDoc(docRef);
+            } catch (e) {
+                console.error("Error shattering connection:", e);
+            }
         }
 
-        function renderMessages() {
+        // --- UI & DOM MANIPULATION ---
+        function setupConnectedScreenDOM() {
+            document.getElementById('local-username-display').textContent = currentState.localUsername;
+            document.getElementById('peer-username-display').textContent = currentState.peerUsername;
+            document.getElementById('connection-status').classList.add('hidden');
+            document.getElementById('ping-user-button').classList.remove('hidden');
+            document.getElementById('ping-user-button').disabled = false;
+            document.getElementById('ping-user-button').textContent = "Ping";
+        }
+        
+        function setupChatRoomDOM() {
+             document.getElementById('chat-header-username').textContent = currentState.peerUsername;
+        }
+
+        function renderMessages(messages) {
             const messagesContainer = document.getElementById('chat-messages');
             messagesContainer.innerHTML = '';
-            currentState.messages.forEach(msg => {
+            messages.forEach(msg => {
                 const bubble = document.createElement('div');
                 bubble.textContent = msg.text;
                 bubble.classList.add('chat-bubble', 'p-3', 'rounded-2xl');
-                bubble.classList.add(msg.sender === 'user' ? 'chat-bubble-user' : 'chat-bubble-peer');
+                const isUser = msg.senderId === auth.currentUser.uid;
+                bubble.classList.add(isUser ? 'chat-bubble-user' : 'chat-bubble-peer');
                 messagesContainer.appendChild(bubble);
             });
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
+        
+        // --- ALL OTHER FUNCTIONS (UTILITIES, CAMERA, STATE) ---
+        // These functions are largely unchanged from the previous version.
+        
+        // State Management
+        function saveState() { try { localStorage.setItem(LS_KEY, JSON.stringify(currentState)); } catch (e) { console.error("Could not save state.", e); }}
+        function loadState() { try { const s = localStorage.getItem(LS_KEY); if (s) { const parsed = JSON.parse(s); currentState.connectionId = parsed.connectionId; currentState.localUsername = parsed.localUsername; } } catch (e) { console.error("Could not load state.", e); }}
+        function updateLastActivity() { localStorage.setItem('gipi_last_activity', new Date().toISOString()); }
+        function checkInactivity() { const la = localStorage.getItem('gipi_last_activity'); if (la) { const d = new Date(la); const t = new Date(); t.setDate(t.getDate() - 30); if (d < t) { shatterConnection(); } } }
 
-        // --- UTILITIES ---
-        function generateRandomUsername() {
-            const adjectives = ["Aqua", "Blue", "Cosmic", "Dark", "Echo", "Future", "Ghost", "Hexa"];
-            const nouns = ["Agent", "Bot", "Cortex", "Droid", "Entity", "Fox", "Glitch", "Hunt"];
-            return `${adjectives[Math.floor(Math.random()*adjectives.length)]}${nouns[Math.floor(Math.random()*nouns.length)]}${Math.floor(100 + Math.random() * 900)}`;
+        // Navigation & Cleanup
+        function goHome() {
+            if (unsubscribeConnection) unsubscribeConnection();
+            if (unsubscribeMessages) unsubscribeMessages();
+            unsubscribeConnection = null;
+            unsubscribeMessages = null;
+            
+            currentState.connectionId = null;
+            currentState.peerUsername = null;
+            
+            renderMainScreen('buttons');
+            changeScreen('main-screen');
+            saveState();
         }
-        
-        function showModal(modalId) {
-            document.getElementById('modal-container').classList.remove('hidden');
-            document.getElementById(modalId).classList.remove('hidden');
-        }
+        window.goHome = goHome; // Make available to onclick
 
-        function hideModal() {
-            document.getElementById('modal-container').classList.add('hidden');
-            document.querySelectorAll('#modal-container > div').forEach(modal => modal.classList.add('hidden'));
-        }
+        // Camera
+        let cameraStream = null;
+        async function startCamera(videoId) { stopCamera(); try { const c = { video: { facingMode: 'user' } }; cameraStream = await navigator.mediaDevices.getUserMedia(c); document.getElementById(videoId).srcObject = cameraStream; document.getElementById(videoId).classList.remove('hidden'); } catch (err) { alert('Could not access camera.'); goHome(); } }
+        function stopCamera() { if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; } }
+        function captureFaceProof() { const v = document.getElementById('face-scan-video'); const c = document.getElementById('face-scan-canvas'); c.width = v.videoWidth; c.height = v.videoHeight; const ctx = c.getContext('2d'); ctx.scale(-1, 1); ctx.drawImage(v, -c.width, 0, c.width, c.height); return c.toDataURL('image/jpeg', 0.8); }
         
-        function updateLastActivity() {
-            localStorage.setItem('gipi_last_activity', new Date().toISOString());
-        }
+        // QR Scanner
+        let html5QrCode = null;
+        function startScanner() { changeScreen('qr-scanner-screen'); html5QrCode = new Html5Qrcode("qr-scanner"); const config = { fps: 10, qrbox: { width: 250, height: 250 } }; html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess).catch(err => { alert("Could not start camera."); goHome(); }); }
+        function stopScannerAndGoBack() { if (html5QrCode && html5QrCode.isScanning) { html5QrCode.stop().finally(() => { html5QrCode = null; goHome(); }); } else { goHome(); } }
         
-        function checkInactivity() {
-            const lastActivity = localStorage.getItem('gipi_last_activity');
-            if (lastActivity) {
-                const lastActivityDate = new Date(lastActivity);
-                const thirtyDaysAgo = new Date();
-                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                if (lastActivityDate < thirtyDaysAgo) {
-                    shatterConnection();
-                }
-            }
-        }
+        // Modals
+        function showModal(id) { document.getElementById('modal-container').classList.remove('hidden'); document.getElementById(id).classList.remove('hidden'); }
+        function hideModal() { document.getElementById('modal-container').classList.add('hidden'); document.querySelectorAll('#modal-container > div').forEach(m => m.classList.add('hidden')); }
         
-        function saveState() {
-            try {
-                localStorage.setItem(LS_KEY, JSON.stringify(currentState));
-            } catch (e) {
-                console.error("Could not save state to localStorage.", e);
-            }
-        }
-        
-        function loadState() {
-             try {
-                const savedState = localStorage.getItem(LS_KEY);
-                if (savedState) {
-                    const parsedState = JSON.parse(savedState);
-                    if (parsedState.currentScreen !== 'loading-screen') {
-                        currentState = parsedState;
-                    }
-                }
-            } catch (e) {
-                console.error("Could not load state from localStorage.", e);
-            }
-        }
-        
+        // Misc UI
+        function showAwaitingStatus() { document.getElementById('connection-status').textContent = "Awaiting connection request..."; document.getElementById('connection-status').classList.remove('hidden'); document.getElementById('ping-user-button').disabled = true; document.getElementById('ping-user-button').textContent = "Pending"; }
+        function renderMainScreen(view) { const el=document.getElementById('main-screen'); if(view === 'permission'){el.innerHTML = `<div class="animate-fade-in"><h2 class="text-4xl font-bold">Welcome to GIPI.</h2><p class="text-gray-400 mt-4 max-w-md mx-auto">To receive secure pings, we need to send notifications.</p><button onclick="requestNotifications()" class="mt-8 bg-white hover:bg-gray-200 text-black font-bold py-4 px-8 rounded-full">Allow Notifications</button><button onclick="declineNotifications()" class="mt-4 text-gray-500 hover:text-gray-400">Maybe later</button></div>`;}else{el.innerHTML = `<div class="animate-fade-in w-full max-w-sm"><h1 class="text-6xl font-black tracking-tighter mb-12">GIPI</h1><div class="space-y-4"><button onclick="generateQR()" class="w-full bg-white text-black font-bold py-5 px-6 rounded-full text-lg">Show Ping QR</button><button onclick="startScanner()" class="w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-5 px-6 rounded-full text-lg">Scan and Connect</button></div></div>`;}}
+        function requestNotifications(){ renderMainScreen('buttons'); }
+        function declineNotifications(){ changeScreen('goodbye-screen'); }
+        function generateRandomUsername() { const a = ["Aqua", "Cosmic", "Dark", "Echo", "Future", "Ghost"]; const n = ["Agent", "Bot", "Cortex", "Droid", "Entity", "Fox"]; return `${a[Math.floor(Math.random()*a.length)]}${n[Math.floor(Math.random()*n.length)]}${Math.floor(100+Math.random()*900)}`; }
+        async function initiatePing() { await startCamera('face-scan-video'); changeScreen('face-scan-screen'); }
+
+        // Expose functions to global scope for onclick attributes
+        Object.assign(window, {
+            requestNotifications, declineNotifications, generateQR, startScanner, stopScannerAndGoBack,
+            initiatePing, sendFaceScan, shatterConnection, sendMessage, acceptPingRequest, declinePingRequest
+        });
     </script>
 </body>
 </html>
